@@ -1,13 +1,25 @@
 from itertools import groupby, combinations
 from collections import Counter, defaultdict
-from python import Levenshtein as lev
-from python import mmh3
-from python import Bio.SeqIO
 import re
 import time
 
-def Pi(x):
-    return mmh3.hash(x)
+def Pi(x, seed = 0):
+    m, r = 0xc6a4a7935bd1e995, 47
+    h = seed ^ (8*m)
+
+    k = 0
+    for char in x:
+        k = (k * 256 + ord(char)) & 0xFFFFFFFF
+
+    k *= m
+    k ^= k >> r
+    k *= m
+    h ^= k
+    h *= m
+    h ^= h >> r
+    h *= m
+    h ^= h >> r
+    return h
 
 def sea_swap64(x):
     return (((x << 56u64) & 0xff00000000000000u64) | 
@@ -130,7 +142,7 @@ def Minjoin(S, K, T):
     for s in S:
         P = partition_string(s, T, Pi)
         for pos, length in P:
-            A.append((f(s[pos:pos + length]), pos, length, S.index(s)))
+           A.append((f(s[pos:pos + length]), pos, length, S.index(s)))
 
     A.sort(key=lambda x: x[0])
     grouped = defaultdict(list)
@@ -145,10 +157,9 @@ def Minjoin(S, K, T):
 
     count = Counter(C)
     threshold = T / 20
-    C = [pair for pair in C if count[pair] >= threshold]
 
     for (i, j) in C:
-        if lev.distance(S[i], S[j]) <= K:
+        if count[(i, j)] >= threshold:
             O.add((i, j))
 
     return O
@@ -183,8 +194,7 @@ def process_pair(pair, K, T):
 
 def compare_adjacent_sequences(sequences, K, T):
     results = []
-    #pairs = [(sequences[i], sequences[i + 1]) for i in range(0, len(sequences) - 1, 2)]
-    pairs = [(sequences[i], sequences[i + 1]) for i in range(0, 20, 2)]
+    pairs = [(sequences[i], sequences[i + 1]) for i in range(0, len(sequences) - 1, 2)]
     
     for pair in pairs:
         result = process_pair(pair, K, T)
@@ -194,28 +204,27 @@ def compare_adjacent_sequences(sequences, K, T):
     return results
 
 if __name__ == "__main__":
+
     start_time = time.time()
-    output_fasta_path = 'filtered_sequences.fa'
-    
-    # Pattern za header
-    pattern = re.compile(r"^(chr\d+):(\d+)-(\d+)$")
+    seq_file = 'filtered_sequences.fa'
     sequences = []
+    pattern = re.compile(r"^>(chr\d+):(\d+)-(\d+)$")
 
-    for record in SeqIO.parse(output_fasta_path, "fasta"):
-        match = pattern.match(record.id)
-        if match:
-            chrom, start, end = match.groups()
-            sequence = str(record.seq)
+    with open(seq_file, 'r') as f:
+        for data in f:
+            seq = next(f, None)
+            data = data.replace('\n', '')
+            seq = seq.replace('\n', '')
 
-            sequences.append((chrom, int(start), int(end), sequence))
-        else:
-            print(f"Header se ne poklapa s zadanim formatom: {record.id}")
-
+            match = pattern.match(data)
+            if match:
+                chrom, start, end = match.groups()
+                sequences.append((chrom, int(start), int(end), seq))
+    
     K = 150.
     T = 20 + K / 8.
     
     comparison_results = compare_adjacent_sequences(sequences, K, T)
-    #print(len(sequences))
 
     cnt = 0
     for result in comparison_results:
@@ -225,4 +234,3 @@ if __name__ == "__main__":
 
     end_time = time.time()
     print(end_time - start_time)
-
