@@ -1,1 +1,2 @@
-# MinJoin-projekat
+# MinJoin++ SD Detection Project
+#This project is part of the Undergraduate Research Opportunities Program (UROP) and focuses on enhancing the detection of segmental duplications (SDs) in the human genome. The primary goal is to evaluate the performance of the MinJoin++ algorithm in approximating string similarity, specifically for detecting SDs, and compare its effectiveness to existing MinHash-based methods, such as SEDEF and BISER.
